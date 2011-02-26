@@ -1,5 +1,12 @@
 #!/usr/bin/python
-
+################################################################################
+#
+# IMDB Based JPG Poster Creator
+#
+# Creates a jpg poster image based on information from IMDB
+#
+################################################################################
+#
 # Userful keys for the movie variable:
 #rating
 #runtimes
@@ -20,34 +27,69 @@
 #long imdb canonical title
 #smart canonical title
 #smart long imdb canonical title
-#full-size cover url - Could be anysize! Although *most* are < 500px wide
+#full-size cover url
+
+
+################################################################################
+# CONFIGURATION
+################################################################################
+
+# This option is useful for bulk runs
+# True results in an interactive mode, False results in a best-guess mode
+ALWAYS_USE_FIRST_RESULT = True
+
+# The image to use if one cant be found on IMDB
+DEFAULT_COVER = 'default.jpg'
+
+
+################################################################################
+# Imports
+################################################################################
 
 # Third party pre requisite modules 
 from imdb import IMDb
 # Built in modules
 import Image, ImageDraw, ImageFont
-import textwrap, cStringIO, urllib, sys
+import textwrap, cStringIO, urllib, sys, pprint
+
+
+################################################################################
+# Functions
+################################################################################
+
+# Find a movie by keywords, returns (name, id)
+def findMovieNameAndIdByKeywords(keywords):
+    results = ia.search_movie(keywords)
+    if (len(results) == 0):
+        return []
+    else:
+        return [(result['smart long imdb canonical title'], result.getID()) for result in results]
+    
 
 # Returns the first movie (object) that matches the keywords given
-def getMovie(keywords):
-    ia = IMDb()
-    results = ia.search_movie(keywords)
-    if len(results) > 0:
-        return ia.get_movie(results[0].getID())
-    else:
+def getMovieByID(ID):
+    try:
+        return ia.get_movie(ID)
+    except:
         return None
 
 
 # Retrieves and returns the full cover
-def getFullCover(movie, maxsize=500):
-    print "cover url = " + movie['full-size cover url']
+def getFullCover(movie, maxwidth=500):
+    #print "cover url = " + movie['full-size cover url']
+
     # Fetch and store the cover image in memory
-    file = urllib.urlopen(movie['full-size cover url'])
-    cs = cStringIO.StringIO(file.read())
-    im = Image.open(cs)
+    try:
+        file = urllib.urlopen(movie['full-size cover url'])
+        cs = cStringIO.StringIO(file.read())
+        im = Image.open(cs)
+
+    # If a cover cannot be obtained, use the default image instead
+    except:
+        im = Image.open(DEFAULT_COVER)
 
     # Ensure the image does not exceed the max width (or height)
-    im.thumbnail((maxsize, maxsize), Image.ANTIALIAS)
+    im.thumbnail((maxwidth, 700), Image.ANTIALIAS)
 
     return im
 
@@ -64,22 +106,37 @@ def createImage(movie):
     im.paste(cover, (20,20))
 
     # Print the full title
-    draw.text((480,20), movie['smart long imdb canonical title'])
+    draw.text((540,20), movie['smart long imdb canonical title'])
+
+    # Print the running time
+    draw.text((540,50), "Running time: " + movie['runtimes'][0] + "m")
 
     # Print the plot onto the canvas line by line
-    x, y = 480, 100
-    s = textwrap.wrap(movie['plot'][0], 80)
+    try:
+        text = movie['plot'][0]
+    except:
+        text = movie['plot outline'][0]
+        
+    x, y = 540, 80
+    s = textwrap.wrap(text, 70)
+
     for line in s:
         draw.text((x,y), line)
         y = y + 20
 
+    # Save the image as a file and return its name
     filename = movie['title']+".jpg"
     im.save(filename, "JPEG")
     return filename
     
 
 
+################################################################################
 # MAIN
+################################################################################
+
+# This is the IMDB client object
+ia = IMDb()
 
 # If no keywords are given on the command line, ask for some
 if (len(sys.argv) > 1):
@@ -87,7 +144,24 @@ if (len(sys.argv) > 1):
 else:
     keywords = raw_input("Enter search terms for a movie title: ")
 
-movie = getMovie(keywords)
+# Search for movies - returns a list of tuples: (name, id)
+movies = findMovieNameAndIdByKeywords(keywords)
+print movies
+
+if (len(movies) == 0):
+    print "No movies found."
+    sys.exit
+elif (len(movies) == 1 or ALWAYS_USE_FIRST_RESULT):
+    print "Found " + movies[0][0]
+    movie = getMovieByID(movies[0][1])
+else:
+    print "Results:"
+    for k,v in enumerate(movies):
+        print str(k) + ") " + v[0]
+    choice = int(raw_input("Enter your choice: "))
+    movie = getMovieByID(movies[choice][1])
+
+pprint.pprint(movie.keys())
 
 imageFilename = createImage(movie)
 print "'" + imageFilename + "' has been created!"
