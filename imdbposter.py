@@ -22,9 +22,11 @@
 #smart long imdb canonical title
 #full-size cover url - Could be anysize! Although *most* are < 500px wide
 
-# Third party pre requisites 
+# Third party pre requisite modules 
 from imdb import IMDb
-import Image, ImageDraw, ImageFont, textwrap, cStringIO, urllib
+# Built in modules
+import Image, ImageDraw, ImageFont
+import textwrap, cStringIO, urllib, sys
 
 # Returns the first movie (object) that matches the keywords given
 def getMovie(keywords):
@@ -78,7 +80,13 @@ def createImage(movie):
 
 
 # MAIN
-keywords = raw_input("Enter search terms for a movie title: ")
+
+# If no keywords are given on the command line, ask for some
+if (len(sys.argv) > 1):
+    keywords = ' '.join(sys.argv[1:])
+else:
+    keywords = raw_input("Enter search terms for a movie title: ")
+
 movie = getMovie(keywords)
 
 imageFilename = createImage(movie)
