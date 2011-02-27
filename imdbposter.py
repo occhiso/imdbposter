@@ -57,7 +57,7 @@ import textwrap, cStringIO, urllib, sys, pprint
 # Functions
 ################################################################################
 
-# Find a movie by keywords, returns (name, id)
+# Find a movie by keywords, returns a list of (name, id)
 def findMovieNameAndIdByKeywords(keywords):
     results = ia.search_movie(keywords)
     if (len(results) == 0):
@@ -75,21 +75,26 @@ def getMovieByID(ID):
 
 
 # Retrieves and returns the full cover
-def getFullCover(movie, maxwidth=500):
-    #print "cover url = " + movie['full-size cover url']
+# TODO: Configurize these magic numbers!
+def getCover(movie, maxwidth=500, maxheight=700):
 
     # Fetch and store the cover image in memory
-    try:
-        file = urllib.urlopen(movie['full-size cover url'])
-        cs = cStringIO.StringIO(file.read())
-        im = Image.open(cs)
+    if (movie.has_key('full-size cover url')):
+        url = movie['full-size cover url']
+        cover = cStringIO.StringIO(urllib.urlopen(url).read())
+    elif (movie.has_key('cover url')):
+        url = movie['cover url']
+        cover = cStringIO.StringIO(urllib.urlopen(url).read())
 
     # If a cover cannot be obtained, use the default image instead
-    except:
-        im = Image.open(DEFAULT_COVER)
+    else:
+        cover = DEFAULT_COVER
+
+    # Open the appropriate cover
+    im = Image.open(cover)
 
     # Ensure the image does not exceed the max width (or height)
-    im.thumbnail((maxwidth, 700), Image.ANTIALIAS)
+    im.thumbnail((maxwidth, maxheight), Image.ANTIALIAS)
 
     return im
 
@@ -97,32 +102,85 @@ def getFullCover(movie, maxwidth=500):
 # Make a jpeg image (aka poster) with info about the given movie
 def createImage(movie):
 
+    # Image configuration
+    CANVAS_WIDTH        = 1024
+    CANVAS_HEIGHT       = 768
+    CANVAS_SPACING      = 20
+    COVER_AREA_WIDTH    = 500
+    COVER_AREA_HEIGHT   = 700
+    TEXT_AREA_LEFT      = 540
+    TEXT_AREA_TOP       = CANVAS_SPACING
+    TEXT_AREA_SPACING   = 30
+    TEXT_AREA_DIVISION  = TEXT_AREA_SPACING + 20
+    TEXT_WRAP           = 70
+
+    # Keep track of vertical position while printing text
+    y = TEXT_AREA_TOP
+
     # Create a blank canvas to work with
-    im = Image.new('RGB', (1024, 768))
+    im = Image.new('RGB', (CANVAS_WIDTH, CANVAS_HEIGHT))
     draw = ImageDraw.Draw(im)
 
-    # Get the cover image and place it on the canvas
-    cover = getFullCover(movie)
-    im.paste(cover, (20,20))
+    # Get the cover image and place it in the center of the canvas
+    cover = getCover(movie)
+    coverX = CANVAS_SPACING + (COVER_AREA_WIDTH  / 2) - (cover.size[0] / 2)
+    coverY = CANVAS_SPACING + (COVER_AREA_HEIGHT / 2) - (cover.size[1] / 2)
+    im.paste(cover, (coverX, coverY))
 
-    # Print the full title
-    draw.text((540,20), movie['smart long imdb canonical title'])
+    # Print the TITLE
+    if (movie.has_key('smart long imdb canonical title')):
+        title = movie['smart long imdb canonical title']
+    elif (movie.has_key('title')):
+        title = movie['title']
+    else:
+        title = "The movie you requested could not be found"
+    draw.text((TEXT_AREA_LEFT,y), title)
+    
+    y += TEXT_AREA_DIVISION
 
-    # Print the running time
-    draw.text((540,50), "Running time: " + movie['runtimes'][0] + "m")
+    # Print the RUNNING TIME
+    if (movie.has_key('runtimes')):
+        runtime = movie['runtimes'][0] + "m"
+    else:
+        runtime = "N/A"
+    draw.text((TEXT_AREA_LEFT,y), "Running time: " + runtime)
 
-    # Print the plot onto the canvas line by line
-    try:
-        text = movie['plot'][0]
-    except:
-        text = movie['plot outline'][0]
-        
-    x, y = 540, 80
-    s = textwrap.wrap(text, 70)
+    y += TEXT_AREA_SPACING
 
-    for line in s:
-        draw.text((x,y), line)
-        y = y + 20
+    # Print STAR RATING
+    if (movie.has_key('rating')):
+        rating = "%.1f / 10 stars" % movie['rating']
+    else:
+        rating = "N/A"
+    draw.text((TEXT_AREA_LEFT,y), "Rating: " + rating)
+
+    y += TEXT_AREA_SPACING
+
+    # Print MPAA RATING (aka CLASSIFICATION)
+    if (movie.has_key('mpaa')):
+        classification = movie['mpaa']
+    else:
+        classification = "N/A"
+    # Wrap the text at the TEXT_WRAP character limit
+    text = textwrap.wrap("Classification: " + classification, TEXT_WRAP)
+    for line in text:
+        draw.text((TEXT_AREA_LEFT,y), line)
+        y += CANVAS_SPACING
+
+    y += TEXT_AREA_DIVISION - CANVAS_SPACING
+
+    # Print the PLOT onto the canvas line by line
+    if (movie.has_key('plot')):
+        plot = movie['plot'][0]
+    elif (movie.has_key('plot outline')):
+        plot = movie['plot outline'][0]
+    else:
+        plot = "..."
+    # Wrap the text at the TEXT_WRAP character limit
+    text = textwrap.wrap(plot, TEXT_WRAP)
+    for line in text:
+        draw.text((TEXT_AREA_LEFT,y), line)
+        y += CANVAS_SPACING
 
     # Save the image as a file and return its name
     filename = movie['title']+".jpg"
@@ -146,11 +204,10 @@ else:
 
 # Search for movies - returns a list of tuples: (name, id)
 movies = findMovieNameAndIdByKeywords(keywords)
-print movies
 
 if (len(movies) == 0):
     print "No movies found."
-    sys.exit
+    sys.exit(1)
 elif (len(movies) == 1 or ALWAYS_USE_FIRST_RESULT):
     print "Found " + movies[0][0]
     movie = getMovieByID(movies[0][1])
@@ -165,5 +222,6 @@ pprint.pprint(movie.keys())
 
 imageFilename = createImage(movie)
 print "'" + imageFilename + "' has been created!"
+
 #print '-'*80 + '\n' + movie['title'] + '\n' + '-'*80 + '\n' + movie['plot outline'] + '\n' + '='*80 + '\n' + movie['plot'][0]
 
