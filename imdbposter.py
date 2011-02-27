@@ -36,10 +36,23 @@
 
 # This option is useful for bulk runs
 # True results in an interactive mode, False results in a best-guess mode
-ALWAYS_USE_FIRST_RESULT = True
+ALWAYS_USE_FIRST_RESULT = False
 
 # The image to use if one cant be found on IMDB
 DEFAULT_COVER = 'default.jpg'
+
+# Image configuration
+CANVAS_WIDTH        = 1024
+CANVAS_HEIGHT       = 768
+CANVAS_SPACING      = 20
+COVER_AREA_WIDTH    = 500
+COVER_AREA_HEIGHT   = 700
+TEXT_AREA_LEFT      = 540
+TEXT_AREA_TOP       = CANVAS_SPACING
+TEXT_AREA_SPACING   = 30
+TEXT_AREA_DIVISION  = TEXT_AREA_SPACING + 20
+TEXT_WRAP           = 70
+
 
 
 ################################################################################
@@ -47,7 +60,12 @@ DEFAULT_COVER = 'default.jpg'
 ################################################################################
 
 # Third party pre requisite modules 
-from imdb import IMDb
+try:
+    from imdb import IMDb
+except:
+    print "You neet to install the python-imdbpy package!"
+    sys.exit(1)
+
 # Built in modules
 import Image, ImageDraw, ImageFont
 import textwrap, cStringIO, urllib, sys, pprint
@@ -75,8 +93,7 @@ def getMovieByID(ID):
 
 
 # Retrieves and returns the full cover
-# TODO: Configurize these magic numbers!
-def getCover(movie, maxwidth=500, maxheight=700):
+def getCover(movie, maxwidth=COVER_AREA_WIDTH, maxheight=COVER_AREA_HEIGHT):
 
     # Fetch and store the cover image in memory
     if (movie.has_key('full-size cover url')):
@@ -101,18 +118,6 @@ def getCover(movie, maxwidth=500, maxheight=700):
 
 # Make a jpeg image (aka poster) with info about the given movie
 def createImage(movie):
-
-    # Image configuration
-    CANVAS_WIDTH        = 1024
-    CANVAS_HEIGHT       = 768
-    CANVAS_SPACING      = 20
-    COVER_AREA_WIDTH    = 500
-    COVER_AREA_HEIGHT   = 700
-    TEXT_AREA_LEFT      = 540
-    TEXT_AREA_TOP       = CANVAS_SPACING
-    TEXT_AREA_SPACING   = 30
-    TEXT_AREA_DIVISION  = TEXT_AREA_SPACING + 20
-    TEXT_WRAP           = 70
 
     # Keep track of vertical position while printing text
     y = TEXT_AREA_TOP
