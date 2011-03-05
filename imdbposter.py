@@ -39,7 +39,7 @@
 VERBOSE = False
 QUIET = False
 
-# TODO: Add options for where to save the poster
+# TODO: Add options for where to save the poster (output, prefix, ?)
 
 # This option is useful for bulk runs
 # True results in an interactive mode, False results in a best-guess mode
@@ -58,7 +58,9 @@ TEXT_AREA_LEFT      = 540
 TEXT_AREA_TOP       = CANVAS_SPACING
 TEXT_AREA_SPACING   = 30
 TEXT_AREA_DIVISION  = TEXT_AREA_SPACING + 20
-TEXT_WRAP           = 70
+TEXT_WRAP           = 50
+FONT_PATH           = '/home/steve/code/imdbposter/monofur.ttf'
+FONT_SIZE           = 18
 
 
 
@@ -133,6 +135,12 @@ def createImage(movie):
     im = Image.new('RGB', (CANVAS_WIDTH, CANVAS_HEIGHT))
     draw = ImageDraw.Draw(im)
 
+    # Attempt to load a true type font to make it look nicer
+    try:
+        font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
+    except:
+        font = None
+
     # Get the cover image and place it in the center of the canvas
     cover = getCover(movie)
     coverX = CANVAS_SPACING + (COVER_AREA_WIDTH  / 2) - (cover.size[0] / 2)
@@ -146,7 +154,7 @@ def createImage(movie):
         title = movie['title']
     else:
         title = "The movie you requested could not be found"
-    draw.text((TEXT_AREA_LEFT,y), title)
+    draw.text((TEXT_AREA_LEFT,y), title, font=font)
     
     y += TEXT_AREA_DIVISION
 
@@ -155,7 +163,7 @@ def createImage(movie):
         runtime = movie['runtimes'][0] + "m"
     else:
         runtime = "N/A"
-    draw.text((TEXT_AREA_LEFT,y), "Running time: " + runtime)
+    draw.text((TEXT_AREA_LEFT,y), "Running time: " + runtime, font=font)
 
     y += TEXT_AREA_SPACING
 
@@ -164,7 +172,7 @@ def createImage(movie):
         rating = "%.1f / 10 stars" % movie['rating']
     else:
         rating = "N/A"
-    draw.text((TEXT_AREA_LEFT,y), "Rating: " + rating)
+    draw.text((TEXT_AREA_LEFT,y), "Rating: " + rating, font=font)
 
     y += TEXT_AREA_SPACING
 
@@ -176,7 +184,7 @@ def createImage(movie):
     # Wrap the text at the TEXT_WRAP character limit
     text = textwrap.wrap("Classification: " + classification, TEXT_WRAP)
     for line in text:
-        draw.text((TEXT_AREA_LEFT,y), line)
+        draw.text((TEXT_AREA_LEFT,y), line, font=font)
         y += CANVAS_SPACING
 
     y += TEXT_AREA_DIVISION - CANVAS_SPACING
@@ -191,7 +199,7 @@ def createImage(movie):
     # Wrap the text at the TEXT_WRAP character limit
     text = textwrap.wrap(plot, TEXT_WRAP)
     for line in text:
-        draw.text((TEXT_AREA_LEFT,y), line)
+        draw.text((TEXT_AREA_LEFT,y), line, font=font)
         y += CANVAS_SPACING
 
     # Save the image as a file and return its name

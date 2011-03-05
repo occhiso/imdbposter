@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# SIMPLE TEST
+# Grab one poster and then view it! ...simple! :)
+
+#python imdbposter.py -a stone; eog Stone.jpg
+
 # BULK TEST
 # This script just runs some common test cases I've been using
 # Then I just have to run through the jpg's to check how it went
