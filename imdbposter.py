@@ -34,6 +34,13 @@
 # CONFIGURATION
 ################################################################################
 
+# TODO: Still havent actually used these options yet
+# This could be a verbosity level (int) instead of a bool?
+VERBOSE = False
+QUIET = False
+
+# TODO: Add options for where to save the poster
+
 # This option is useful for bulk runs
 # True results in an interactive mode, False results in a best-guess mode
 ALWAYS_USE_FIRST_RESULT = False
@@ -68,7 +75,7 @@ except:
 
 # Built in modules
 import Image, ImageDraw, ImageFont
-import textwrap, cStringIO, urllib, sys, pprint
+import textwrap, cStringIO, urllib, sys, pprint, getopt
 
 
 ################################################################################
@@ -193,6 +200,11 @@ def createImage(movie):
     return filename
     
 
+def usage():
+    print sys.argv[0] + " [options] [movie keywords]"
+    print "\nWhere options are:"
+    print "\t-a\t--auto\tAutomatically use the best matching movie title (no interactivity)" 
+    print ""
 
 ################################################################################
 # MAIN
@@ -201,9 +213,31 @@ def createImage(movie):
 # This is the IMDB client object
 ia = IMDb()
 
-# If no keywords are given on the command line, ask for some
-if (len(sys.argv) > 1):
-    keywords = ' '.join(sys.argv[1:])
+# Try to parse the command line arguments
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "haqv", ["help", "auto", "quiet", "verbose"])
+except getopt.GetoptError, err:
+    print str(err)
+    usage()
+    sys.exit(1)
+
+# Process command line arguments
+for o, a in opts:
+    if o in ("-v", "--verbose"):
+        VERBOSE = True
+    elif o in ("-q", "--quiet"):
+        QUIET = True
+    elif o in ("-h", "--help"):
+        usage()
+        sys.exit()
+    elif o in ("-a", "--auto"):
+        ALWAYS_USE_FIRST_RESULT = True
+    else:
+        assert False, "unhandled option"
+
+# If no keywords are given on the command line, ask for some (interactive mode)
+if (len(args) > 0):
+    keywords = ' '.join(args)
 else:
     keywords = raw_input("Enter search terms for a movie title: ")
 
@@ -213,9 +247,11 @@ movies = findMovieNameAndIdByKeywords(keywords)
 if (len(movies) == 0):
     print "No movies found."
     sys.exit(1)
+
 elif (len(movies) == 1 or ALWAYS_USE_FIRST_RESULT):
-    print "Found " + movies[0][0]
+    print "Found '" + movies[0][0] + "'"
     movie = getMovieByID(movies[0][1])
+
 else:
     print "Results:"
     for k,v in enumerate(movies):
@@ -223,7 +259,7 @@ else:
     choice = int(raw_input("Enter your choice: "))
     movie = getMovieByID(movies[choice][1])
 
-pprint.pprint(movie.keys())
+#pprint.pprint(movie.keys())
 
 imageFilename = createImage(movie)
 print "'" + imageFilename + "' has been created!"
