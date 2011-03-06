@@ -59,9 +59,9 @@ TEXT_AREA_TOP       = CANVAS_SPACING
 TEXT_AREA_SPACING   = 30
 TEXT_AREA_DIVISION  = TEXT_AREA_SPACING + 20
 TEXT_WRAP           = 50
-FONT_PATH           = '/home/steve/code/imdbposter/monofur.ttf'
+FONT_PATH           = 'monofur.ttf'
 FONT_SIZE           = 18
-
+OUTPUT_PREFIX       = './'
 
 
 ################################################################################
@@ -77,7 +77,7 @@ except:
 
 # Built in modules
 import Image, ImageDraw, ImageFont
-import textwrap, cStringIO, urllib, sys, pprint, getopt
+import textwrap, cStringIO, urllib, sys, os, pprint, getopt
 
 
 ################################################################################
@@ -203,11 +203,12 @@ def createImage(movie):
         y += CANVAS_SPACING
 
     # Save the image as a file and return its name
-    filename = movie['title']+".jpg"
+    filename = OUTPUT_PREFIX + movie['title']+".jpg"
     im.save(filename, "JPEG")
     return filename
     
 
+# Human readable description of how to use this program
 def usage():
     print sys.argv[0] + " [options] [movie keywords]"
     print "\nWhere options are:"
@@ -223,23 +224,32 @@ ia = IMDb()
 
 # Try to parse the command line arguments
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "haqv", ["help", "auto", "quiet", "verbose"])
+    opts, args = getopt.getopt(sys.argv[1:], "hap:qv", [
+        "help", "auto", "prefix=", "quiet", "verbose"
+    ])
 except getopt.GetoptError, err:
     print str(err)
     usage()
     sys.exit(1)
 
 # Process command line arguments
-for o, a in opts:
-    if o in ("-v", "--verbose"):
+for opt, arg in opts:
+    if opt in ("-v", "--verbose"):
         VERBOSE = True
-    elif o in ("-q", "--quiet"):
+    elif opt in ("-q", "--quiet"):
         QUIET = True
-    elif o in ("-h", "--help"):
+    elif opt in ("-h", "--help"):
         usage()
         sys.exit()
-    elif o in ("-a", "--auto"):
+    elif opt in ("-a", "--auto"):
         ALWAYS_USE_FIRST_RESULT = True
+    elif opt in ("-p", "--prefix"):
+        # Ensure the given prefix ends with a '/' (or '\' for Windows)
+        arg = arg.strip()
+        if arg.endswith(os.sep):
+            OUTPUT_PREFIX = arg
+        else:
+            OUTPUT_PREFIX = arg + os.sep
     else:
         assert False, "unhandled option"
 
